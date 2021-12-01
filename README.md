@@ -1,2 +1,9 @@
 # todo-go
-todo api with golang + gin + gorm
+todo api with golang
+
+use
+-gin
+-gorm
+-dotenv
+-jwt
+-sqlite
