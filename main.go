@@ -12,10 +12,12 @@ import (
 
 	"github.com/chakhrits/todo-api/auth"
 	"github.com/chakhrits/todo-api/todo"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"golang.org/x/time/rate"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -38,7 +40,7 @@ func main() {
 		log.Printf("please consider environment variable: %s", err)
 	}
 	//db connection
-	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(os.Getenv("DB_CON")), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
@@ -47,6 +49,19 @@ func main() {
 	db.AutoMigrate(&todo.Todo{})
 
 	r := gin.Default() //Create default router
+
+	//cors
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{
+		"http://localhost:8080",
+	}
+	config.AllowHeaders = []string{
+		"Origin",
+		"Authorization",
+		"TransactionID",
+	}
+
+	r.Use(cors.New(config))
 	//===============Router===============
 	r.GET("/health", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -67,6 +82,10 @@ func main() {
 	//สร้างgroupเพื่อแยกว่าpathไหนprotectได้บ้าง
 	protected := r.Group("", auth.Protect([]byte(os.Getenv("SIGN"))))
 	protected.POST("/todos", handler.NewTask)
+	protected.GET("/todos", handler.TodoList)
+	protected.GET("/todos/:id", handler.GetTodo)
+	protected.PUT("/todos/:id", handler.PutTodo)
+	protected.DELETE("/todos/:id", handler.RemoveTodo)
 	//===============End Router===============
 
 	//Graceful shutdown
